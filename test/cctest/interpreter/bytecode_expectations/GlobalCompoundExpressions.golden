@@ -20,9 +20,8 @@ bytecode array length: 12
 bytecodes: [
   /*   26 E> */ B(StackCheck),
   /*   31 S> */ B(LdrGlobal), U8(1), R(0),
-                B(LdaSmi), U8(1),
-                B(BitwiseAnd), R(0),
-  /*   45 E> */ B(StaGlobalSloppy), U8(0), U8(3),
+                B(BitwiseAndSmi), U8(1), R(0), U8(3),
+  /*   45 E> */ B(StaGlobalSloppy), U8(0), U8(4),
   /*   51 S> */ B(Return),
 ]
 constant pool: [
@@ -43,9 +42,8 @@ bytecode array length: 12
 bytecodes: [
   /*   27 E> */ B(StackCheck),
   /*   32 S> */ B(LdrGlobal), U8(1), R(0),
-                B(LdaSmi), U8(1),
-                B(Add), R(0),
-  /*   51 E> */ B(StaGlobalSloppy), U8(0), U8(3),
+                B(AddSmi), U8(1), R(0), U8(3),
+  /*   51 E> */ B(StaGlobalSloppy), U8(0), U8(4),
   /*   57 S> */ B(Return),
 ]
 constant pool: [

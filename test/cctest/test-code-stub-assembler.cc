@@ -1103,24 +1103,21 @@ TEST(TestOutOfScopeVariable) {
 
 namespace {
 
-void TestStubCacheOffsetCalculation(StubCache::Table table,
-                                    Code::Kind handler_kind) {
+void TestStubCacheOffsetCalculation(StubCache::Table table) {
   Isolate* isolate(CcTest::InitIsolateOnce());
   const int kNumParams = 2;
   CodeStubAssemblerTester m(isolate, kNumParams);
 
-  Code::Flags code_flags =
-      Code::RemoveHolderFromFlags(Code::ComputeHandlerFlags(handler_kind));
   {
     Node* name = m.Parameter(0);
     Node* map = m.Parameter(1);
-    Node* primary_offset = m.StubCachePrimaryOffset(name, code_flags, map);
+    Node* primary_offset = m.StubCachePrimaryOffset(name, map);
     Node* result;
     if (table == StubCache::kPrimary) {
       result = primary_offset;
     } else {
       CHECK_EQ(StubCache::kSecondary, table);
-      result = m.StubCacheSecondaryOffset(name, code_flags, primary_offset);
+      result = m.StubCacheSecondaryOffset(name, primary_offset);
     }
     m.Return(m.SmiFromWord32(result));
   }
@@ -1163,13 +1160,12 @@ void TestStubCacheOffsetCalculation(StubCache::Table table,
 
       int expected_result;
       {
-        int primary_offset =
-            StubCache::PrimaryOffsetForTesting(*name, code_flags, *map);
+        int primary_offset = StubCache::PrimaryOffsetForTesting(*name, *map);
         if (table == StubCache::kPrimary) {
           expected_result = primary_offset;
         } else {
-          expected_result = StubCache::SecondaryOffsetForTesting(
-              *name, code_flags, primary_offset);
+          expected_result =
+              StubCache::SecondaryOffsetForTesting(*name, primary_offset);
         }
       }
       Handle<Object> result = ft.Call(name, map).ToHandleChecked();
@@ -1182,20 +1178,12 @@ void TestStubCacheOffsetCalculation(StubCache::Table table,
 
 }  // namespace
 
-TEST(StubCachePrimaryOffsetLoadIC) {
-  TestStubCacheOffsetCalculation(StubCache::kPrimary, Code::LOAD_IC);
+TEST(StubCachePrimaryOffset) {
+  TestStubCacheOffsetCalculation(StubCache::kPrimary);
 }
 
-TEST(StubCachePrimaryOffsetStoreIC) {
-  TestStubCacheOffsetCalculation(StubCache::kPrimary, Code::STORE_IC);
-}
-
-TEST(StubCacheSecondaryOffsetLoadIC) {
-  TestStubCacheOffsetCalculation(StubCache::kSecondary, Code::LOAD_IC);
-}
-
-TEST(StubCacheSecondaryOffsetStoreIC) {
-  TestStubCacheOffsetCalculation(StubCache::kSecondary, Code::STORE_IC);
+TEST(StubCacheSecondaryOffset) {
+  TestStubCacheOffsetCalculation(StubCache::kSecondary);
 }
 
 namespace {
@@ -1216,10 +1204,8 @@ TEST(TryProbeStubCache) {
   const int kNumParams = 3;
   CodeStubAssemblerTester m(isolate, kNumParams);
 
-  Code::Flags flags_to_query =
-      Code::RemoveHolderFromFlags(Code::ComputeHandlerFlags(Code::LOAD_IC));
-
-  StubCache stub_cache(isolate);
+  Code::Kind ic_kind = Code::LOAD_IC;
+  StubCache stub_cache(isolate, ic_kind);
   stub_cache.Clear();
 
   {
@@ -1232,8 +1218,8 @@ TEST(TryProbeStubCache) {
     Variable var_handler(&m, MachineRepresentation::kTagged);
     Label if_handler(&m), if_miss(&m);
 
-    m.TryProbeStubCache(&stub_cache, flags_to_query, receiver, name,
-                        &if_handler, &var_handler, &if_miss);
+    m.TryProbeStubCache(&stub_cache, receiver, name, &if_handler, &var_handler,
+                        &if_miss);
     m.Bind(&if_handler);
     m.BranchIfWordEqual(expected_handler, var_handler.value(), &passed,
                         &failed);
@@ -1298,25 +1284,8 @@ TEST(TryProbeStubCache) {
 
   // Generate some number of handlers.
   for (int i = 0; i < 30; i++) {
-    Code::Kind code_kind;
-    switch (rand_gen.NextInt(4)) {
-      case 0:
-        code_kind = Code::LOAD_IC;
-        break;
-      case 1:
-        code_kind = Code::KEYED_LOAD_IC;
-        break;
-      case 2:
-        code_kind = Code::STORE_IC;
-        break;
-      case 3:
-        code_kind = Code::KEYED_STORE_IC;
-        break;
-      default:
-        UNREACHABLE();
-    }
     Code::Flags flags =
-        Code::RemoveHolderFromFlags(Code::ComputeHandlerFlags(code_kind));
+        Code::RemoveHolderFromFlags(Code::ComputeHandlerFlags(ic_kind));
     handlers.push_back(CreateCodeWithFlags(flags));
   }
 
@@ -1341,7 +1310,7 @@ TEST(TryProbeStubCache) {
     int index = rand_gen.NextInt();
     Handle<Name> name = names[index % names.size()];
     Handle<JSObject> receiver = receivers[index % receivers.size()];
-    Code* handler = stub_cache.Get(*name, receiver->map(), flags_to_query);
+    Code* handler = stub_cache.Get(*name, receiver->map());
     if (handler == nullptr) {
       queried_non_existing = true;
     } else {
@@ -1357,7 +1326,7 @@ TEST(TryProbeStubCache) {
     int index2 = rand_gen.NextInt();
     Handle<Name> name = names[index1 % names.size()];
     Handle<JSObject> receiver = receivers[index2 % receivers.size()];
-    Code* handler = stub_cache.Get(*name, receiver->map(), flags_to_query);
+    Code* handler = stub_cache.Get(*name, receiver->map());
     if (handler == nullptr) {
       queried_non_existing = true;
     } else {
@@ -1369,6 +1338,139 @@ TEST(TryProbeStubCache) {
   }
   // Ensure we performed both kind of queries.
   CHECK(queried_existing && queried_non_existing);
+}
+
+TEST(GotoIfException) {
+  typedef CodeStubAssembler::Label Label;
+  typedef CodeStubAssembler::Variable Variable;
+  Isolate* isolate(CcTest::InitIsolateOnce());
+
+  const int kNumParams = 1;
+  CodeStubAssemblerTester m(isolate, kNumParams);
+
+  Node* context = m.HeapConstant(Handle<Context>(isolate->native_context()));
+  Node* to_string_tag =
+      m.HeapConstant(isolate->factory()->to_string_tag_symbol());
+  Variable exception(&m, MachineRepresentation::kTagged);
+
+  Label exception_handler(&m);
+  Callable to_string = CodeFactory::ToString(isolate);
+  Node* string = m.CallStub(to_string, context, to_string_tag);
+  m.GotoIfException(string, &exception_handler, &exception);
+  m.Return(string);
+
+  m.Bind(&exception_handler);
+  m.Return(exception.value());
+
+  Handle<Code> code = m.GenerateCode();
+  CHECK(!code.is_null());
+
+  // Emulate TFJ builtin
+  code->set_flags(Code::ComputeFlags(Code::BUILTIN));
+
+  FunctionTester ft(code, kNumParams);
+  Handle<Object> result = ft.Call().ToHandleChecked();
+
+  // Should be a TypeError
+  CHECK(result->IsJSObject());
+
+  Handle<Object> constructor =
+      Object::GetPropertyOrElement(result,
+                                   isolate->factory()->constructor_string())
+          .ToHandleChecked();
+  CHECK(constructor->SameValue(*isolate->type_error_function()));
+}
+
+TEST(GotoIfExceptionMultiple) {
+  typedef CodeStubAssembler::Label Label;
+  typedef CodeStubAssembler::Variable Variable;
+  Isolate* isolate(CcTest::InitIsolateOnce());
+
+  const int kNumParams = 4;  // receiver, first, second, third
+  CodeStubAssemblerTester m(isolate, kNumParams);
+
+  Node* context = m.HeapConstant(Handle<Context>(isolate->native_context()));
+  Node* first_value = m.Parameter(0);
+  Node* second_value = m.Parameter(1);
+  Node* third_value = m.Parameter(2);
+
+  Label exception_handler1(&m);
+  Label exception_handler2(&m);
+  Label exception_handler3(&m);
+  Variable return_value(&m, MachineRepresentation::kWord32);
+  Variable error(&m, MachineRepresentation::kTagged);
+
+  return_value.Bind(m.Int32Constant(0));
+
+  // try { return ToString(param1) } catch (e) { ... }
+  Callable to_string = CodeFactory::ToString(isolate);
+  Node* string = m.CallStub(to_string, context, first_value);
+  m.GotoIfException(string, &exception_handler1, &error);
+  m.Return(string);
+
+  // try { ToString(param2); return 7 } catch (e) { ... }
+  m.Bind(&exception_handler1);
+  return_value.Bind(m.Int32Constant(7));
+  error.Bind(m.UndefinedConstant());
+  string = m.CallStub(to_string, context, second_value);
+  m.GotoIfException(string, &exception_handler2, &error);
+  m.Return(m.SmiFromWord32(return_value.value()));
+
+  // try { ToString(param3); return 7 & ~2; } catch (e) { return e; }
+  m.Bind(&exception_handler2);
+  // Return returnValue & ~2
+  error.Bind(m.UndefinedConstant());
+  string = m.CallStub(to_string, context, third_value);
+  m.GotoIfException(string, &exception_handler3, &error);
+  m.Return(m.SmiFromWord32(
+      m.Word32And(return_value.value(),
+                  m.Word32Xor(m.Int32Constant(2), m.Int32Constant(-1)))));
+
+  m.Bind(&exception_handler3);
+  m.Return(error.value());
+
+  Handle<Code> code = m.GenerateCode();
+  CHECK(!code.is_null());
+
+  // Emulate TFJ builtin
+  code->set_flags(Code::ComputeFlags(Code::BUILTIN));
+
+  FunctionTester ft(code, kNumParams);
+
+  Handle<Object> result;
+  // First handler does not throw, returns result of first value
+  result = ft.Call(isolate->factory()->undefined_value(),
+                   isolate->factory()->to_string_tag_symbol())
+               .ToHandleChecked();
+  CHECK(String::cast(*result)->IsOneByteEqualTo(OneByteVector("undefined")));
+
+  // First handler returns a number
+  result = ft.Call(isolate->factory()->to_string_tag_symbol(),
+                   isolate->factory()->undefined_value())
+               .ToHandleChecked();
+  CHECK_EQ(7, Smi::cast(*result)->value());
+
+  // First handler throws, second handler returns a number
+  result = ft.Call(isolate->factory()->to_string_tag_symbol(),
+                   isolate->factory()->to_primitive_symbol())
+               .ToHandleChecked();
+  CHECK_EQ(7 & ~2, Smi::cast(*result)->value());
+
+  // First handler throws, second handler throws, third handler returns thrown
+  // value.
+  result = ft.Call(isolate->factory()->to_string_tag_symbol(),
+                   isolate->factory()->to_primitive_symbol(),
+                   isolate->factory()->unscopables_symbol())
+               .ToHandleChecked();
+
+  // Should be a TypeError
+  CHECK(result->IsJSObject());
+
+  Handle<Object> constructor =
+      Object::GetPropertyOrElement(result,
+                                   isolate->factory()->constructor_string())
+          .ToHandleChecked();
+  CHECK(constructor->SameValue(*isolate->type_error_function()));
 }
 
 }  // namespace internal

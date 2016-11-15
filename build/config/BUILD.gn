@@ -6,6 +6,7 @@ import("//build/config/allocator.gni")
 import("//build/config/chrome_build.gni")
 import("//build/config/chromecast_build.gni")
 import("//build/config/crypto.gni")
+import("//build/config/dcheck_always_on.gni")
 import("//build/config/features.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/ui.gni")
@@ -31,22 +32,33 @@ declare_args() {
   # significantly slow execution.
   enable_iterator_debugging = true
 
-  # Set to true to enable dcheck in Release builds.
-  dcheck_always_on = false
-
   # Normally we try to decide whether to use precompiled headers or
   # not based on the other build arguments, but in some cases it is
   # easiest to force them off explicitly.
   disable_precompiled_headers = false
 }
 
-# TODO(brettw) Most of these should be removed. Instead of global feature
-# flags, we should have more modular flags that apply only to a target and its
-# dependents. For example, depending on the "x11" meta-target should define
-# USE_X11 for all dependents so that everything that could use X11 gets the
-# define, but anything that doesn't depend on X11 doesn't see it.
+# ==============================================
+#   PLEASE DO NOT ADD MORE THINGS TO THIS LIST
+# ==============================================
 #
-# For now we define these globally to match the current GYP build.
+# Legacy feature defines applied to all targets.
+#
+# These are applied to every single compile in the build and most of them are
+# only relevant to a few files. This bloats command lines and causes
+# unnecessary recompiles when flags are flipped.
+#
+# To pass defines to source code from the build, use the buildflag system which
+# will write headers containing the defines you need. This isolates the define
+# and means its definition can participate in the build graph, only recompiling
+# things when it actually changes.
+#
+# See //build/buildflag_header.gni for inntructions on generating headers.
+#
+# This will also allow you to scope your build flag to a BUILD.gn file (or a
+# .gni file if you need it from more than one place) rather than making global
+# flags. See //build/config/BUILDCONFIG.gn for advice on where to define
+# build flags.
 config("feature_flags") {
   # Don't use deprecated V8 APIs anywhere.
   defines = [ "V8_DEPRECATION_WARNINGS" ]
@@ -55,14 +67,6 @@ config("feature_flags") {
   }
   if (enable_notifications) {
     defines += [ "ENABLE_NOTIFICATIONS" ]
-  }
-  if (enable_pepper_cdms) {
-    # TODO(brettw) should probably be "=1"
-    defines += [ "ENABLE_PEPPER_CDMS" ]
-  }
-  if (enable_browser_cdms) {
-    # TODO(brettw) should probably be "=1"
-    defines += [ "ENABLE_BROWSER_CDMS" ]
   }
   if (enable_plugins) {
     defines += [ "ENABLE_PLUGINS=1" ]
@@ -81,6 +85,12 @@ config("feature_flags") {
       # Enable printing with print preview.
       # Can be defined without ENABLE_BASIC_PRINTING.
       defines += [ "ENABLE_PRINT_PREVIEW=1" ]
+    }
+    if ((enable_basic_printing && is_win) || enable_print_preview) {
+      # Windows basic printing or print preview requires pdf enabled.
+      assert(enable_pdf,
+             "Windows basic printing or print preview needs pdf: " +
+                 "set enable_pdf=true.")
     }
   }
   if (enable_spellcheck) {
@@ -161,8 +171,11 @@ config("feature_flags") {
   if (is_msan) {
     defines += [ "MEMORY_SANITIZER" ]
   }
-  if (is_ubsan || is_ubsan_vptr || is_ubsan_security) {
+  if (is_ubsan || is_ubsan_null || is_ubsan_vptr || is_ubsan_security) {
     defines += [ "UNDEFINED_SANITIZER" ]
+  }
+  if (use_external_popup_menu) {
+    defines += [ "USE_EXTERNAL_POPUP_MENU=1" ]
   }
   if (enable_webrtc) {
     defines += [ "ENABLE_WEBRTC=1" ]
@@ -179,35 +192,17 @@ config("feature_flags") {
   if (enable_themes) {
     defines += [ "ENABLE_THEMES=1" ]
   }
-  if (enable_captive_portal_detection) {
-    defines += [ "ENABLE_CAPTIVE_PORTAL_DETECTION=1" ]
-  }
   if (enable_session_service) {
     defines += [ "ENABLE_SESSION_SERVICE=1" ]
   }
   if (enable_rlz) {
     defines += [ "ENABLE_RLZ" ]
   }
-  if (enable_plugin_installation) {
-    defines += [ "ENABLE_PLUGIN_INSTALLATION=1" ]
-  }
-  if (enable_app_list) {
-    defines += [ "ENABLE_APP_LIST=1" ]
-  }
-  if (enable_settings_app) {
-    defines += [ "ENABLE_SETTINGS_APP=1" ]
-  }
   if (enable_supervised_users) {
     defines += [ "ENABLE_SUPERVISED_USERS=1" ]
   }
-  if (enable_service_discovery) {
-    defines += [ "ENABLE_SERVICE_DISCOVERY=1" ]
-  }
   if (enable_image_loader_extension) {
     defines += [ "IMAGE_LOADER_EXTENSION=1" ]
-  }
-  if (enable_topchrome_md) {
-    defines += [ "ENABLE_TOPCHROME_MD=1" ]
   }
   if (enable_wayland_server) {
     defines += [ "ENABLE_WAYLAND_SERVER=1" ]
@@ -217,12 +212,6 @@ config("feature_flags") {
   }
   if (proprietary_codecs) {
     defines += [ "USE_PROPRIETARY_CODECS" ]
-  }
-  if (enable_hangout_services_extension) {
-    defines += [ "ENABLE_HANGOUT_SERVICES_EXTENSION=1" ]
-  }
-  if (enable_video_hole) {
-    defines += [ "VIDEO_HOLE=1" ]
   }
   if (safe_browsing_mode == 1) {
     defines += [ "FULL_SAFE_BROWSING" ]
@@ -248,13 +237,18 @@ config("feature_flags") {
   if (is_syzyasan) {
     defines += [
       "SYZYASAN",
-      "MEMORY_TOOL_REPLACES_ALLOCATOR",
       "MEMORY_SANITIZER_INITIAL_SIZE",
     ]
   }
   if (!fieldtrial_testing_like_official_build && !is_chrome_branded) {
     defines += [ "FIELDTRIAL_TESTING_ENABLED" ]
   }
+
+  # ==============================================
+  #   PLEASE DO NOT ADD MORE THINGS TO THIS LIST
+  # ==============================================
+  #
+  # See the comment at the top.
 }
 
 # Debug/release ----------------------------------------------------------------
@@ -388,6 +382,8 @@ config("executable_config") {
       "//build/config/mac:mac_dynamic_flags",
       "//build/config/mac:mac_executable_flags",
     ]
+  } else if (is_ios) {
+    configs += [ "//build/config/ios:ios_dynamic_flags" ]
   } else if (is_linux || is_android) {
     configs += [ "//build/config/gcc:executable_ldconfig" ]
     if (is_android) {
@@ -396,6 +392,16 @@ config("executable_config") {
       configs += [ "//build/config/chromecast:executable_config" ]
     }
   }
+
+  # If we're using the prebuilt instrumented libraries with the sanitizers, we
+  # need to add ldflags to every binary to make sure they are picked up.
+  if (prebuilt_instrumented_libraries_available) {
+    configs += [ "//third_party/instrumented_libraries:prebuilt_ldflags" ]
+  }
+  if (use_locally_built_instrumented_libraries) {
+    configs += [ "//third_party/instrumented_libraries:locally_built_ldflags" ]
+  }
+  configs += [ "//build/config/sanitizers:link_executable" ]
 }
 
 # Shared library configs -------------------------------------------------------
@@ -408,9 +414,21 @@ config("shared_library_config") {
     configs += _windows_linker_configs
   } else if (is_mac) {
     configs += [ "//build/config/mac:mac_dynamic_flags" ]
+  } else if (is_ios) {
+    configs += [ "//build/config/ios:ios_dynamic_flags" ]
   } else if (is_chromecast) {
     configs += [ "//build/config/chromecast:shared_library_config" ]
   }
+
+  # If we're using the prebuilt instrumented libraries with the sanitizers, we
+  # need to add ldflags to every binary to make sure they are picked up.
+  if (prebuilt_instrumented_libraries_available) {
+    configs += [ "//third_party/instrumented_libraries:prebuilt_ldflags" ]
+  }
+  if (use_locally_built_instrumented_libraries) {
+    configs += [ "//third_party/instrumented_libraries:locally_built_ldflags" ]
+  }
+  configs += [ "//build/config/sanitizers:link_shared_library" ]
 }
 
 # Add this config to your target to enable precompiled headers.

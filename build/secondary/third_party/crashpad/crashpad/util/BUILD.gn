@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/toolchain.gni")
+
 if (is_mac) {
   import("//build/config/sysroot.gni")
 }
@@ -32,10 +34,13 @@ if (is_mac) {
 
     args = [ "{{source}}" ]
     args += rebase_path(outputs, root_build_dir)
+    if (!use_system_xcode) {
+      args += [ hermetic_xcode_path ]
+    }
   }
 }
 
-source_set("util") {
+static_library("util") {
   sources = [
     "file/file_io.cc",
     "file/file_io.h",
@@ -66,6 +71,8 @@ source_set("util") {
     "misc/initialization_state.h",
     "misc/initialization_state_dcheck.cc",
     "misc/initialization_state_dcheck.h",
+    "misc/metrics.cc",
+    "misc/metrics.h",
     "misc/pdb_structures.cc",
     "misc/pdb_structures.h",
     "misc/random_string.cc",
@@ -161,6 +168,7 @@ source_set("util") {
     "win/scoped_local_alloc.h",
     "win/scoped_process_suspend.cc",
     "win/scoped_process_suspend.h",
+    "win/termination_codes.h",
     "win/time.cc",
     "win/time.h",
     "win/xp_compat.h",

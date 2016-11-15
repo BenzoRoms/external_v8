@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Copyright 2014 The Chromium Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,14 +7,22 @@ SCRIPT_DIR=$(cd $(dirname $0) && pwd)
 
 DISTRO=debian
 DIST=jessie
+DIST_UPDATES=jessie-updates
+
 PACKAGES_EXT=xz
+
 APT_REPO=http://http.us.debian.org/debian
-REPO_BASEDIR="${APT_REPO}/dists/${DIST}"
 # gpg keyring file generated using:
 #   export KEYS="518E17E1 46925553 2B90D010"
 #   gpg --recv-keys $KEYS
 #   gpg --output ./debian-archive-jessie-stable.gpg --export $KEYS
 KEYRING_FILE=${SCRIPT_DIR}/debian-archive-jessie-stable.gpg
+
+HAS_ARCH_AMD64=1
+HAS_ARCH_I386=1
+HAS_ARCH_ARM=1
+HAS_ARCH_ARM64=1
+HAS_ARCH_MIPS=1
 
 # Sysroot packages: these are the packages needed to build chrome.
 # NOTE: When DEBIAN_PACKAGES is modified, the packagelist files must be updated
@@ -29,6 +37,8 @@ DEBIAN_PACKAGES="\
   libattr1
   libavahi-client3
   libavahi-common3
+  libbluetooth3
+  libbluetooth-dev
   libbrlapi0.6
   libbrlapi-dev
   libc6
@@ -49,6 +59,8 @@ DEBIAN_PACKAGES="\
   libdrm-dev
   libdrm-nouveau2
   libdrm-radeon1
+  libegl1-mesa
+  libegl1-mesa-dev
   libelf1
   libelf-dev
   libexpat1
@@ -138,9 +150,15 @@ DEBIAN_PACKAGES="\
   libtasn1-6
   libudev-dev
   libudev1
+  libwayland-client0
+  libwayland-cursor0
+  libwayland-dev
+  libwayland-egl1-mesa
+  libwayland-server0
   libx11-6
   libx11-dev
   libx11-xcb1
+  libx11-xcb-dev
   libxau6
   libxau-dev
   libxcb1
@@ -202,20 +220,29 @@ DEBIAN_PACKAGES_AMD64="
 "
 
 DEBIAN_PACKAGES_X86="
-  libquadmath0
-  libdrm-intel1
-  libcilkrts5
-  libitm1
   libasan0
+  libcilkrts5
+  libdrm-intel1
+  libitm1
+  libquadmath0
   libubsan0
 "
 
 DEBIAN_PACKAGES_ARM="
-  libdrm-omap1
+  libasan0
   libdrm-exynos1
   libdrm-freedreno1
-  libasan0
+  libdrm-omap1
   libubsan0
+"
+DEBIAN_PACKAGES_ARM64="
+  libdatrie1
+  libgmp10
+  libgraphite2-3
+  libhogweed2
+  libitm1
+  libnettle4
+  libthai0
 "
 
 . ${SCRIPT_DIR}/sysroot-creator.sh

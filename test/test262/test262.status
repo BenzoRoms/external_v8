@@ -85,11 +85,6 @@
   'intl402/DateTimeFormat/prototype/format/format-function-name': [FAIL],
   'intl402/Collator/prototype/compare/compare-function-name': [FAIL],
 
-  # https://bugs.chromium.org/p/v8/issues/detail?id=4778
-  'intl402/Collator/prototype/compare/name': [FAIL],
-  'intl402/DateTimeFormat/prototype/format/name': [FAIL],
-  'intl402/NumberFormat/prototype/format/name': [FAIL],
-
   # https://code.google.com/p/v8/issues/detail?id=4251
   'language/expressions/postfix-increment/S11.3.1_A5_T1': [FAIL],
   'language/expressions/postfix-increment/S11.3.1_A5_T2': [FAIL],
@@ -141,9 +136,6 @@
   'intl402/Collator/10.1.1_1': [FAIL],
   'intl402/DateTimeFormat/12.1.1_1': [FAIL],
   'intl402/NumberFormat/11.1.1_1': [FAIL],
-
-  # https://bugs.chromium.org/p/v8/issues/detail?id=4727
-  'built-ins/TypedArrays/length-arg-is-symbol-throws': [FAIL],
 
   # https://bugs.chromium.org/p/v8/issues/detail?id=4784
   'built-ins/TypedArray/prototype/set/typedarray-arg-negative-integer-offset-throws': [FAIL],
@@ -253,8 +245,6 @@
 
   # https://bugs.chromium.org/p/v8/issues/detail?id=4231
   'language/eval-code/direct/var-env-lower-lex-catch-non-strict': [FAIL],
-  'language/statements/try/early-catch-lex': [FAIL],
-  'language/statements/try/early-catch-var': [FAIL],
 
   # https://bugs.chromium.org/p/v8/issues/detail?id=4951
   'language/expressions/assignment/dstr-array-elem-iter-rtrn-close': [FAIL],
@@ -337,34 +327,17 @@
   'built-ins/Function/prototype/toString/unicode': [FAIL],
 
   # https://bugs.chromium.org/p/v8/issues/detail?id=1569
+  'language/eval-code/direct/export': [SKIP],
+  'language/eval-code/direct/import': [SKIP],
+  'language/eval-code/indirect/export': [SKIP],
+  'language/eval-code/indirect/import': [SKIP],
   'language/module-code/*': [SKIP],
 
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5111
-  'annexB/language/function-code/block-decl-func-skip-param': [FAIL],
-  'annexB/language/function-code/if-decl-else-decl-a-func-skip-param': [FAIL],
-  'annexB/language/function-code/if-decl-else-decl-b-func-skip-param': [FAIL],
-  'annexB/language/function-code/if-decl-else-stmt-func-skip-param': [FAIL],
-  'annexB/language/function-code/if-decl-no-else-func-skip-param': [FAIL],
-  'annexB/language/function-code/if-stmt-else-decl-func-skip-param': [FAIL],
-  'annexB/language/function-code/switch-case-func-skip-param': [FAIL],
-  'annexB/language/function-code/switch-dflt-func-skip-param': [FAIL],
-
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5112
-  'language/statements/try/scope-catch-block-lex-open': [FAIL],
-
   # https://bugs.chromium.org/p/v8/issues/detail?id=5012
-  'intl402/Intl/getCanonicalLocales/*': [FAIL],
-
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5113
-  'built-ins/TypedArray/prototype/toLocaleString/calls-tolocalestring-from-each-value': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/calls-tostring-from-each-value': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/calls-valueof-from-each-value': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/return-abrupt-from-firstelement-tolocalestring': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/return-abrupt-from-firstelement-tostring': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/return-abrupt-from-firstelement-valueof': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/return-abrupt-from-nextelement-tolocalestring': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/return-abrupt-from-nextelement-tostring': [FAIL],
-  'built-ins/TypedArray/prototype/toLocaleString/return-abrupt-from-nextelement-valueof': [FAIL],
+  # http://bugs.icu-project.org/trac/ticket/12671
+  'intl402/Intl/getCanonicalLocales/weird-cases': [FAIL],
+  # https://github.com/tc39/test262/issues/743
+  'intl402/Intl/getCanonicalLocales/main': [FAIL],
 
   # https://bugs.chromium.org/p/v8/issues/detail?id=5115
   'language/statements/class/subclass/class-definition-null-proto-missing-return-override': [FAIL],
@@ -386,40 +359,6 @@
   'annexB/built-ins/Object/prototype/__lookupGetter__/this-non-obj': [FAIL],
   'annexB/built-ins/Object/prototype/__lookupSetter__/this-non-obj': [FAIL],
 
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5120
-  'built-ins/DataView/negative-bytelength-throws': [FAIL],
-  'built-ins/DataView/prototype/getFloat32/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getFloat64/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getInt16/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getInt32/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getInt8/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getUint16/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getUint32/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/getUint8/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setFloat32/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setFloat32/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setFloat64/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setFloat64/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setInt16/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setInt16/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setInt32/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setInt32/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setInt8/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setInt8/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setUint16/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setUint16/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setUint32/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setUint32/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/prototype/setUint8/no-value-arg': [FAIL],
-  'built-ins/DataView/prototype/setUint8/toindex-byteoffset': [FAIL],
-  'built-ins/DataView/toindex-byteoffset': [FAIL],
-
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5121
-  'language/expressions/assignment/destructuring/obj-prop-__proto__dup': [FAIL],
-
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5124
-  'built-ins/TypedArrays/length-arg-toindex-length': [FAIL],
-
   # https://bugs.chromium.org/p/v8/issues/detail?id=4973
   'language/literals/numeric/non-octal-decimal-integer-strict': [FAIL],
 
@@ -436,9 +375,6 @@
   'annexB/built-ins/Object/prototype/__lookupSetter__/lookup-proto-data': [FAIL],
   'annexB/built-ins/Object/prototype/__lookupSetter__/lookup-proto-get-err': [FAIL],
   'annexB/built-ins/Object/prototype/__lookupSetter__/lookup-proto-proto-err': [FAIL],
-
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5134
-  'built-ins/Array/prototype/concat/is-concat-spreadable-is-array-proxy-revoked': [FAIL],
 
   # https://bugs.chromium.org/p/v8/issues/detail?id=4451
   'annexB/language/eval-code/direct/global-block-decl-eval-global-exsting-global-init': [FAIL],
@@ -480,15 +416,12 @@
   'annexB/built-ins/RegExp/prototype/compile/pattern-regexp-same': [FAIL],
   'annexB/built-ins/RegExp/prototype/compile/pattern-undefined': [FAIL],
 
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5138
-  'annexB/built-ins/RegExp/prototype/compile/pattern-regexp-immutable-lastindex': [FAIL],
-
   # https://bugs.chromium.org/p/v8/issues/detail?id=5139
   'annexB/built-ins/Date/prototype/setYear/time-clip': [FAIL],
   'annexB/built-ins/Date/prototype/setYear/year-number-relative': [FAIL],
 
-  # https://bugs.chromium.org/p/v8/issues/detail?id=5140
-  'annexB/built-ins/String/prototype/substr/start-to-int-err': [FAIL],
+  # Fixed by https://github.com/tc39/test262/pull/662.
+  'built-ins/Object/getOwnPropertyDescriptors/duplicate-keys': [FAIL],
 
   ######################## NEEDS INVESTIGATION ###########################
 
@@ -557,7 +490,24 @@
   'built-ins/RegExp/prototype/multiline/15.10.7.4-1': [FAIL],
 
   # https://github.com/tc39/test262/issues/694
+  'built-ins/TypedArrays/length-arg-toindex-length': [FAIL],
+
+  # https://github.com/tc39/test262/issues/696
   'language/statements/class/subclass/builtin-objects/ArrayBuffer/regular-subclassing': [FAIL],
+
+  # https://github.com/tc39/test262/issues/685
+  'built-ins/DataView/prototype/setUint8/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setUint16/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setUint32/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setInt8/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setInt16/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setInt32/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setFloat32/range-check-after-value-conversion': [FAIL],
+  'built-ins/DataView/prototype/setFloat64/range-check-after-value-conversion': [FAIL],
+
+  # https://github.com/tc39/test262/issues/686
+  'built-ins/DataView/prototype/setFloat32/toindex-byteoffset': [FAIL],
+  'built-ins/DataView/prototype/setFloat64/toindex-byteoffset': [FAIL],
 
   ############################ SKIPPED TESTS #############################
 

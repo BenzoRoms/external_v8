@@ -6,7 +6,6 @@
 #define V8_CCTEST_COMPILER_FUNCTION_TESTER_H_
 
 #include "src/ast/ast-numbering.h"
-#include "src/ast/scopes.h"
 #include "src/compiler.h"
 #include "src/compiler/linkage.h"
 #include "src/compiler/pipeline.h"
@@ -14,6 +13,7 @@
 #include "src/full-codegen/full-codegen.h"
 #include "src/handles.h"
 #include "src/objects-inl.h"
+#include "src/parsing/parse-info.h"
 #include "src/parsing/parser.h"
 #include "src/parsing/rewriter.h"
 #include "test/cctest/cctest.h"
@@ -30,7 +30,7 @@ class FunctionTester : public InitializedHandleScope {
         flags_(flags) {
     Compile(function);
     const uint32_t supported_flags =
-        CompilationInfo::kFunctionContextSpecializing |
+        CompilationInfo::kNativeContextSpecializing |
         CompilationInfo::kInliningEnabled;
     CHECK_EQ(0u, flags_ & ~supported_flags);
   }
@@ -208,15 +208,18 @@ class FunctionTester : public InitializedHandleScope {
     CompilationInfo info(&parse_info, function);
     info.MarkAsDeoptimizationEnabled();
 
-    CHECK(Parser::ParseStatic(info.parse_info()));
+    if (!FLAG_turbo_from_bytecode) {
+      CHECK(Parser::ParseStatic(info.parse_info()));
+    }
     info.SetOptimizing();
-    if (flags_ & CompilationInfo::kFunctionContextSpecializing) {
-      info.MarkAsFunctionContextSpecializing();
+    if (flags_ & CompilationInfo::kNativeContextSpecializing) {
+      info.MarkAsNativeContextSpecializing();
     }
     if (flags_ & CompilationInfo::kInliningEnabled) {
       info.MarkAsInliningEnabled();
     }
-    if (FLAG_turbo_from_bytecode && function->shared()->HasBytecodeArray()) {
+    if (FLAG_turbo_from_bytecode) {
+      CHECK(Compiler::EnsureBytecode(&info));
       info.MarkAsOptimizeFromBytecode();
     } else {
       CHECK(Compiler::Analyze(info.parse_info()));

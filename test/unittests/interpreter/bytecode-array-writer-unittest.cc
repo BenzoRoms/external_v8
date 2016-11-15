@@ -9,8 +9,8 @@
 #include "src/interpreter/bytecode-array-writer.h"
 #include "src/interpreter/bytecode-label.h"
 #include "src/interpreter/constant-array-builder.h"
-#include "src/interpreter/source-position-table.h"
 #include "src/isolate.h"
+#include "src/source-position-table.h"
 #include "src/utils.h"
 #include "test/unittests/interpreter/bytecode-utils.h"
 #include "test/unittests/test-utils.h"
@@ -22,8 +22,10 @@ namespace interpreter {
 class BytecodeArrayWriterUnittest : public TestWithIsolateAndZone {
  public:
   BytecodeArrayWriterUnittest()
-      : constant_array_builder_(isolate(), zone()),
-        bytecode_array_writer_(isolate(), zone(), &constant_array_builder_) {}
+      : constant_array_builder_(zone(), isolate()->factory()->the_hole_value()),
+        bytecode_array_writer_(
+            zone(), &constant_array_builder_,
+            SourcePositionTableBuilder::RECORD_SOURCE_POSITIONS) {}
   ~BytecodeArrayWriterUnittest() override {}
 
   void Write(BytecodeNode* node, const BytecodeSourceInfo& info);
@@ -135,17 +137,17 @@ TEST_F(BytecodeArrayWriterUnittest, SimpleExample) {
     CHECK_EQ(bytecodes()->at(i), bytes[i]);
   }
 
-  writer()->ToBytecodeArray(0, 0, factory()->empty_fixed_array());
+  Handle<BytecodeArray> bytecode_array = writer()->ToBytecodeArray(
+      isolate(), 0, 0, factory()->empty_fixed_array());
   CHECK_EQ(bytecodes()->size(), arraysize(bytes));
 
   PositionTableEntry expected_positions[] = {
       {0, 10, false}, {1, 55, true}, {7, 70, true}};
-  Handle<ByteArray> source_positions =
-      source_position_table_builder()->ToSourcePositionTable();
-  SourcePositionTableIterator source_iterator(*source_positions);
+  SourcePositionTableIterator source_iterator(
+      bytecode_array->source_position_table());
   for (size_t i = 0; i < arraysize(expected_positions); ++i) {
     const PositionTableEntry& expected = expected_positions[i];
-    CHECK_EQ(source_iterator.bytecode_offset(), expected.bytecode_offset);
+    CHECK_EQ(source_iterator.code_offset(), expected.code_offset);
     CHECK_EQ(source_iterator.source_position(), expected.source_position);
     CHECK_EQ(source_iterator.is_statement(), expected.is_statement);
     source_iterator.Advance();
@@ -161,9 +163,8 @@ TEST_F(BytecodeArrayWriterUnittest, ComplexExample) {
       /*  3 42 E> */ B(Star), R8(1),
       /*  5 68 S> */ B(JumpIfUndefined), U8(38),
       /*  7       */ B(JumpIfNull), U8(36),
-      /*  9       */ B(ToObject),
-      /* 10       */ B(Star), R8(3),
-      /* 12       */ B(ForInPrepare), R8(4),
+      /*  9       */ B(ToObject), R8(3),
+      /* 11       */ B(ForInPrepare), R8(3), R8(4),
       /* 14       */ B(LdaZero),
       /* 15       */ B(Star), R8(7),
       /* 17 63 S> */ B(ForInDone), R8(7), R8(6),
@@ -197,11 +198,9 @@ TEST_F(BytecodeArrayWriterUnittest, ComplexExample) {
   CHECK_EQ(max_register_count(), 2);
   WriteJump(Bytecode::kJumpIfUndefined, &jump_end_1, {68, true});
   WriteJump(Bytecode::kJumpIfNull, &jump_end_2);
-  Write(Bytecode::kToObject);
-  CHECK_EQ(max_register_count(), 2);
-  Write(Bytecode::kStar, R(3));
+  Write(Bytecode::kToObject, R(3));
   CHECK_EQ(max_register_count(), 4);
-  Write(Bytecode::kForInPrepare, R(4));
+  Write(Bytecode::kForInPrepare, R(3), R(4));
   CHECK_EQ(max_register_count(), 7);
   Write(Bytecode::kLdaZero);
   CHECK_EQ(max_register_count(), 7);
@@ -236,12 +235,13 @@ TEST_F(BytecodeArrayWriterUnittest, ComplexExample) {
              static_cast<int>(expected_bytes[i]));
   }
 
-  Handle<ByteArray> source_positions =
-      source_position_table_builder()->ToSourcePositionTable();
-  SourcePositionTableIterator source_iterator(*source_positions);
+  Handle<BytecodeArray> bytecode_array = writer()->ToBytecodeArray(
+      isolate(), 0, 0, factory()->empty_fixed_array());
+  SourcePositionTableIterator source_iterator(
+      bytecode_array->source_position_table());
   for (size_t i = 0; i < arraysize(expected_positions); ++i) {
     const PositionTableEntry& expected = expected_positions[i];
-    CHECK_EQ(source_iterator.bytecode_offset(), expected.bytecode_offset);
+    CHECK_EQ(source_iterator.code_offset(), expected.code_offset);
     CHECK_EQ(source_iterator.source_position(), expected.source_position);
     CHECK_EQ(source_iterator.is_statement(), expected.is_statement);
     source_iterator.Advance();

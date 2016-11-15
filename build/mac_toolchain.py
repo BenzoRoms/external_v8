@@ -30,26 +30,13 @@ import urllib2
 
 # This can be changed after running /build/package_mac_toolchain.py.
 TOOLCHAIN_REVISION = '5B1008'
-TOOLCHAIN_SUB_REVISION = 2
+TOOLCHAIN_SUB_REVISION = 3
 TOOLCHAIN_VERSION = '%s-%s' % (TOOLCHAIN_REVISION, TOOLCHAIN_SUB_REVISION)
 
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 TOOLCHAIN_BUILD_DIR = os.path.join(BASE_DIR, 'mac_files', 'Xcode.app')
 STAMP_FILE = os.path.join(BASE_DIR, 'mac_files', 'toolchain_build_revision')
 TOOLCHAIN_URL = 'gs://chrome-mac-sdk/'
-
-
-def GetToolchainDirectory():
-  if sys.platform == 'darwin' and not UseLocalMacSDK():
-    return TOOLCHAIN_BUILD_DIR
-  else:
-    return None
-
-
-def SetToolchainEnvironment():
-  mac_toolchain_dir = GetToolchainDirectory()
-  if mac_toolchain_dir:
-    os.environ['DEVELOPER_DIR'] = mac_toolchain_dir
 
 
 def ReadStampFile():
@@ -151,7 +138,7 @@ def AcceptLicense():
     subprocess.check_call(['sudo', '/usr/bin/xcode-select', '-s', old_path])
 
 
-def UseLocalMacSDK():
+def _UseLocalMacSDK():
   force_pull = os.environ.has_key('FORCE_MAC_TOOLCHAIN')
 
   # Don't update the toolchain if there's already one installed outside of the
@@ -167,8 +154,7 @@ def main():
   if sys.platform != 'darwin':
     return 0
 
-  # TODO(justincohen): Add support for GN per crbug.com/570091
-  if UseLocalMacSDK():
+  if _UseLocalMacSDK():
     print 'Using local toolchain.'
     return 0
 

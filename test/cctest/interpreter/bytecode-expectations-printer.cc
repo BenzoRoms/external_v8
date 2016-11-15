@@ -12,7 +12,6 @@
 #include "include/v8.h"
 
 #include "src/base/logging.h"
-#include "src/base/smart-pointers.h"
 #include "src/compiler.h"
 #include "src/runtime/runtime.h"
 
@@ -21,7 +20,7 @@
 #include "src/interpreter/bytecodes.h"
 #include "src/interpreter/interpreter-intrinsics.h"
 #include "src/interpreter/interpreter.h"
-#include "src/interpreter/source-position-table.h"
+#include "src/source-position-table.h"
 
 namespace v8 {
 namespace internal {
@@ -201,7 +200,7 @@ void BytecodeExpectationsPrinter::PrintSourcePosition(
     int bytecode_offset) const {
   static const size_t kPositionWidth = 4;
   if (!source_iterator.done() &&
-      source_iterator.bytecode_offset() == bytecode_offset) {
+      source_iterator.code_offset() == bytecode_offset) {
     stream << "/* " << std::setw(kPositionWidth)
            << source_iterator.source_position();
     if (source_iterator.is_statement()) {

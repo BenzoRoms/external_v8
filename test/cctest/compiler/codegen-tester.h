@@ -5,6 +5,7 @@
 #ifndef V8_CCTEST_COMPILER_CODEGEN_TESTER_H_
 #define V8_CCTEST_COMPILER_CODEGEN_TESTER_H_
 
+#include "src/compiler.h"
 #include "src/compiler/instruction-selector.h"
 #include "src/compiler/pipeline.h"
 #include "src/compiler/raw-machine-assembler.h"
@@ -38,7 +39,8 @@ class RawMachineAssemblerTester : public HandleAndZoneScope,
                                 p1, p2, p3, p4),
                 true),
             MachineType::PointerRepresentation(),
-            InstructionSelector::SupportedMachineOperatorFlags()) {}
+            InstructionSelector::SupportedMachineOperatorFlags(),
+            InstructionSelector::AlignmentRequirements()) {}
 
   virtual ~RawMachineAssemblerTester() {}
 

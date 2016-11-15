@@ -4,11 +4,8 @@
 
 import("//build/config/android/config.gni")
 import("//build/config/sanitizers/sanitizers.gni")
-import("//build/config/sysroot.gni")
 
 assert(is_android)
-
-use_gold = current_cpu == "x86" || current_cpu == "x64" || current_cpu == "arm"
 
 # This is included by reference in the //build/config/compiler config that
 # is applied to all targets. It is here to separate out the logic that is
@@ -24,47 +21,28 @@ config("compiler") {
     # The NDK has these things, but doesn't define the constants to say that it
     # does. Define them here instead.
     "HAVE_SYS_UIO_H",
-  ]
-  ldflags = []
 
-  if (!is_clang) {
-    # Clang doesn't support these flags.
-    cflags += [ "-finline-limit=64" ]
-  }
+    # Forces full rebuilds on NDK rolls.
+    "ANDROID_NDK_VERSION=${android_ndk_version}",
+  ]
+
   if (is_clang) {
     rebased_android_toolchain_root =
         rebase_path(android_toolchain_root, root_build_dir)
     assert(rebased_android_toolchain_root != "")  # Mark as used.
-    if (current_cpu == "mipsel") {
+    if (current_cpu == "mipsel" || current_cpu == "mips64el") {
       cflags += [
         # TODO(gordanac) Enable integrated-as.
-        "-no-integrated-as",
+        "-fno-integrated-as",
         "-B${rebased_android_toolchain_root}/bin",  # Else /usr/bin/as gets picked up.
       ]
     }
+  } else {
+    # Clang doesn't support these flags.
+    cflags += [ "-finline-limit=64" ]
   }
 
-  # Use gold for Android for most CPU architectures.
-  if (use_gold) {
-    ldflags += [ "-fuse-ld=gold" ]
-    if (is_clang) {
-      # Let clang find the ld.gold in the NDK.
-      ldflags += [ "--gcc-toolchain=$rebased_android_toolchain_root" ]
-    }
-
-    # Use -mstackrealign due to a bug on ia32 Jelly Bean.
-    # See crbug.com/521527
-    if (current_cpu == "x86") {
-      cflags += [ "-mstackrealign" ]
-    }
-  }
-
-  if (current_cpu == "mipsel" && is_clang) {
-    # Let clang find the ld.bfd in the NDK.
-    ldflags += [ "--gcc-toolchain=$rebased_android_toolchain_root" ]
-  }
-
-  ldflags += [
+  ldflags = [
     "-Wl,--build-id=sha1",
     "-Wl,--no-undefined",
 
@@ -78,12 +56,6 @@ config("compiler") {
     # http://crbug.com/448386
     "-Wl,--exclude-libs=libvpx_assembly_arm.a",
   ]
-  if (current_cpu == "arm" && !use_order_profiling) {
-    ldflags += [
-      # Enable identical code folding to reduce size.
-      "-Wl,--icf=all",
-    ]
-  }
 
   if (is_clang) {
     if (current_cpu == "arm") {
@@ -91,8 +63,6 @@ config("compiler") {
     } else if (current_cpu == "x86") {
       abi_target = "i686-linux-androideabi"
     } else if (current_cpu == "arm64") {
-      # Place holder for arm64 support, not tested.
-      # TODO: Enable clang support for Android Arm64. http://crbug.com/539781
       abi_target = "aarch64-linux-android"
     } else if (current_cpu == "x64") {
       # Place holder for x64 support, not tested.
@@ -149,6 +119,15 @@ config("runtime_library") {
   } else {
     libs = [ "c++_static" ]
   }
+  libs += [
+    "c++abi",
+    "android_support",
+  ]
+
+  # arm builds of libc++ starting in NDK r12 depend on unwind.
+  if (current_cpu == "arm") {
+    libs += [ "unwind" ]
+  }
 
   # Manually link the libgcc.a that the cross compiler uses. This is
   # absolute because the linker will look inside the sysroot if it's not.
@@ -168,6 +147,21 @@ config("runtime_library") {
       "__compiler_offsetof=__builtin_offsetof",
       "nan=__builtin_nan",
     ]
+
+    if (current_cpu == "x64" || current_cpu == "arm64" ||
+        current_cpu == "mips64el") {
+      # 64-bit targets build with NDK 21, 32-bit targets with NDK 16
+      # (see ./config.gni).  When using clang, NDK 21 defines snprintf to
+      # something for a kind of for of _FORTIFY_SOURCE support, see
+      # third_party/android_tools/ndk/platforms/android-21/arch-x86_64/usr/include/stdio.h
+      # Making snprintf a macro breaks base/strings/string_utils.h which
+      # defines base::snprintf().  So define snprintf to itself to force the
+      # NDK to not redefine it.  This disables _chk for snprintf, but since
+      # 32-bit versions use NDK 16 which doesn't have any fortify support, that
+      # seems ok.  b/32067310 tracks better fortify support with clang.
+      # TODO(thakis): Remove this once b/32067310 is fixed.
+      defines += [ "snprintf=snprintf" ]
+    }
   }
 
   # TODO(jdduke) Re-enable on mips after resolving linking
@@ -181,12 +175,6 @@ config("executable_config") {
   cflags = [ "-fPIE" ]
   asmflags = [ "-fPIE" ]
   ldflags = [ "-pie" ]
-
-  if (!use_gold) {
-    # ld needs help finding libraries when linking.
-    _rebased_sysroot = rebase_path(sysroot, root_build_dir)
-    ldflags += [ "-Wl,-rpath-link=.:$_rebased_sysroot/usr/lib" ]
-  }
 }
 
 config("hide_native_jni_exports") {

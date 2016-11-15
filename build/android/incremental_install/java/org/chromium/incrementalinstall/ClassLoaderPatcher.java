@@ -4,6 +4,7 @@
 
 package org.chromium.incrementalinstall;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
 import android.util.Log;
@@ -40,6 +41,10 @@ final class ClassLoaderPatcher {
     /**
      * Loads all dex files within |dexDir| into the app's ClassLoader.
      */
+    @SuppressLint({
+            "SetWorldReadable",
+            "SetWorldWritable",
+            })
     void loadDexFiles(File dexDir) throws ReflectiveOperationException, FileNotFoundException {
         Log.i(TAG, "Installing dex files from: " + dexDir);
         File[] dexFilesArr = dexDir.listFiles();
@@ -100,6 +105,7 @@ final class ClassLoaderPatcher {
     /**
      * Sets up all libraries within |libDir| to be loadable by System.loadLibrary().
      */
+    @SuppressLint("SetWorldReadable")
     void importNativeLibs(File libDir) throws ReflectiveOperationException, IOException {
         Log.i(TAG, "Importing native libraries from: " + libDir);
         if (!libDir.exists()) {
@@ -181,10 +187,11 @@ final class ClassLoaderPatcher {
             }
         }
         if (numNotChanged > 0) {
-            Log.i(TAG, numNotChanged + " libs already up-to-date.");
+            Log.i(TAG, numNotChanged + " libs already up to date.");
         }
     }
 
+    @SuppressLint("SetWorldReadable")
     private static boolean copyIfModified(File src, File dest) throws IOException {
         long lastModified = src.lastModified();
         if (dest.exists() && dest.lastModified() == lastModified) {
@@ -231,7 +238,8 @@ final class ClassLoaderPatcher {
         for (int i = 0; i < files.length; ++i) {
             File file = files[i];
             Object dexFile;
-            if ("N".equals(Build.VERSION.CODENAME)) {
+            if (Build.VERSION.CODENAME.equals("N")
+                    || Build.VERSION.SDK_INT > Build.VERSION_CODES.M) {
                 // loadDexFile requires that ret contain all previously added elements.
                 dexFile = Reflect.invokeMethod(clazz, "loadDexFile", file, optimizedDirectory,
                                                mClassLoader, ret);
