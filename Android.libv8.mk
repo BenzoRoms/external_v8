@@ -7,8 +7,7 @@ include $(CLEAR_VARS)
 # Set up the target identity
 LOCAL_MODULE := libv8
 LOCAL_MODULE_CLASS := STATIC_LIBRARIES
-L
-OCAL_ARM_MODE := arm
+LOCAL_ARM_MODE := arm
 
 LOCAL_WHOLE_STATIC_LIBRARIES := libv8base libv8platform libv8sampler libv8src libv8gen v8peephole
 
